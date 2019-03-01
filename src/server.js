@@ -8,8 +8,8 @@ const app = express();
 const setUpDb = require("./utils/db");
 
 const UserRoutes = require("./resources/user/user.router");
-
 const PostRoutes = require("./resources/post/post.router");
+const AdminRoutes = require("./resources/admin/admin.router");
 
 const isDev = (process.env.DEV = true);
 
@@ -28,6 +28,7 @@ app.use(json());
 
 app.use("/api/user", UserRoutes);
 app.use("/api/post", PostRoutes);
+app.use("/api/admin", AdminRoutes);
 
 app.use((_, res) => {
   res
