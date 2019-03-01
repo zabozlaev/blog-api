@@ -26,16 +26,25 @@ module.exports = {
 
     let result = "";
 
-    for (let i = 0; i < length; i += 1) {
+    for (let i = 0; i < size; i += 1) {
       result += kit[Math.floor(Math.random() * length)];
     }
     return result;
   },
   verifyToken,
+  async hasPermisson(token) {
+    try {
+      const { id, role } = await verifyToken(token);
+      if (role !== "admin") return false;
+      return id;
+    } catch (error) {
+      return false;
+    }
+  },
   signToken(user) {
     const jwtPayload = {
       id: user._id,
-      isAdmin: user.isAdmin
+      role: user.role
     };
     // let's a token with id and one way role only :)
     return jwt.sign(jwtPayload, secret, { expiresIn });
@@ -62,11 +71,18 @@ module.exports = {
         .lean()
         .exec();
 
-      if (!user || user.isBanned) {
+      if (!user) {
         return res
           .status(401)
           .send({
             ...respond(false, "Token has expired.")
+          })
+          .end();
+      } else if (user.isBanned) {
+        return res
+          .status(403)
+          .send({
+            ...respond(false, "You are banned.")
           })
           .end();
       }
