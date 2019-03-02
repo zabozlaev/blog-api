@@ -6,7 +6,7 @@ const Comment = require("./comment/comment.model");
 const USER_POPULATE_ARGS =
   "-password -email -canReset -resetToken -expirationDate";
 
-const socket = require("../../socket.js");
+const socket = require("../../socket.js").user;
 
 const respond = require("../../utils/respond");
 
@@ -106,7 +106,8 @@ module.exports = {
       const { postId } = req.params;
       const newComment = new Comment({
         content,
-        commentAuthor: _id
+        commentAuthor: _id,
+        postId: postId
       });
       newComment
         .save()
@@ -126,7 +127,7 @@ module.exports = {
               postUpd
             })
             .end();
-          socket.emit(`comments`, {
+          socket.emit(`comment`, {
             action: "create",
             comment: postUpd.comments[0],
             postId: postUpd._id

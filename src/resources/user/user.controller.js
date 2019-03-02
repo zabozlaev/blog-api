@@ -6,7 +6,9 @@ const transporter = require("../../utils/mailer.js");
 
 const respond = require("../../utils/respond.js");
 
-const socket = require("../../socket");
+const socket = require("../../socket").admin;
+
+const queue = require("../../queue");
 
 module.exports = {
   async register(req, res) {
@@ -16,23 +18,20 @@ module.exports = {
       if (isNew) {
         const user = new User({ email, password, username });
         await user.save();
-        res
-          .status(201)
-          .send({
-            token: signToken(user),
-            role: "member",
-            ...respond(true, "You've successfuly registered.")
-          })
-          .end();
 
-        await transporter.sendMail({
-          to: email,
-          from: "zabcode@zabcode-blog.com",
-          subject: "Thank you for registration!",
-          html: `
+        const job = queue
+          .create("email", {
+            to: "snickeycs@gmail.com",
+            from: "zabcode@zabcode-blog.com",
+            subject: "Thank you for registration!",
+            html: `
             <h1>Dear, ${username || email}. Thanks for registration!</h1>
           `
-        });
+          })
+          .priority("normal")
+          .save(err => {
+            if (err) console.log(`[QUEUE ERR] - JOB ${job.id}, err: ${err}`);
+          });
 
         socket.emit("registration", {
           action: "created",
@@ -42,12 +41,21 @@ module.exports = {
             joinedAt: user.joinedAt
           }
         });
+        res
+          .status(201)
+          .send({
+            token: signToken(user),
+            role: "member",
+            ...respond(true, "You've successfuly registered.")
+          })
+          .end();
       } else {
         res.status(400).send({
           ...respond(false, "This email is already in use.")
         });
       }
     } catch (e) {
+      console.log(e);
       res.status(500).send({
         ...respond(false, "Internal Server Error.")
       });
@@ -90,7 +98,7 @@ module.exports = {
     try {
       const user = await User.findOne({ email });
 
-      if (user.expirationDate > expirationDate) {
+      if (user.expirationDate > Date.now()) {
         return res
           .status(400)
           .send({
@@ -103,15 +111,20 @@ module.exports = {
       user.resetToken = resetToken;
       await user.save();
 
-      await transporter.sendMail({
-        to: email,
-        from: "ilya@zabcode.com",
-        subject: "Reset Password",
-        html: `
+      const job = queue
+        .create("email", {
+          to: "snickeycs@gmail.com",
+          from: "ilya@zabcode.com",
+          subject: "Reset Password",
+          html: `
           <h1>You asked for password reset, right?</h1>
           <p>Click <a href="http://localhost:8080/confirm/${resetToken}">here to confirm. </a> (Token: ${resetToken})</p>
         `
-      });
+        })
+        .priority("high")
+        .save(err => {
+          if (err) console.log(err);
+        });
 
       res.status(201).send({
         ...respond(true, "Email was sent.")
