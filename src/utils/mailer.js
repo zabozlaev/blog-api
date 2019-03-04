@@ -2,7 +2,9 @@ const nodemailer = require("nodemailer");
 
 const sendGridTransporter = require("nodemailer-sendgrid-transport");
 
-const queue = require("../queue");
+const { MailQueue } = require("../queue");
+
+const User = require("../resources/user/user.model");
 
 const {
   auth: { api_key }
@@ -16,18 +18,31 @@ const transport = nodemailer.createTransport(
   })
 );
 
-const email = async (data, done) => {
-  try {
-    await transport.sendMail(data);
-    done();
-  } catch (error) {
-    return done(error);
-  }
+const email = async data => {
+  return await transport.sendMail(data);
 };
 
-queue.process("email", (job, done) => {
+const notifyAll = async postId => {
+  const allEmails = await User.find({}).select("email");
+
+  allEmails.forEach(({ email }) => {
+    const sendFields = {
+      to: email,
+      from: "ilya@zabcode.com",
+      subject: "Here is a new post!",
+      html: `
+      <h1>Hey.</h1> We've got a new post for you: ...link/${postId}
+    `
+    };
+
+    MailQueue.add(sendFields);
+  });
+};
+
+MailQueue.process(async job => {
   const { data } = job;
-  email(data, done);
+
+  return await email(data);
 });
 
-module.exports = transport;
+module.exports = { MailQueue, notifyAll };
