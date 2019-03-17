@@ -10,8 +10,8 @@ passport.use(
   "vkToken",
   new Strategy(
     {
-      clientID: "6841845",
-      clientSecret: "H2qKZK8BMEeagubZfPOa",
+      clientID: process.env.clientIdVk,
+      clientSecret: process.env.clientSecretVk,
       callbackURL: "http://localhost:3000/api/user/auth/vkontakte/",
       passReqToCallback: true
     },
