@@ -140,7 +140,7 @@ module.exports = {
 
     const { resetToken } = req.params;
 
-    // const { _id } = req.user;
+    const { _id } = req.user;
 
     try {
       const user = await User.findOne({ email, resetToken });
